@@ -1,0 +1,210 @@
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>لوحة تحكم المسؤول</title>
+  <link rel="stylesheet" href="adminStyles.css" />
+</head>
+
+<body class="admin-body" style="display:flex; flex-direction:column; min-height:100vh;">
+
+  <!-- ===== Header ===== -->
+  <header class="admin-header">
+    <div class="admin-left">
+      <img src="img/logo.png" class="admin-logo" alt="Logo">
+      <div class="admin-title">
+        <h1>لوحة تحكم المسؤول</h1>
+        <span>محطة الدعم</span>
+      </div>
+    </div>
+
+    <a href="index.html" class="logout">تسجيل الخروج</a>
+  </header>
+
+  <!-- ===== Main ===== -->
+  <main class="admin-main" style="flex:1;">
+
+    <!-- ===== Stats ===== -->
+    <div class="admin-cards">
+      <button class="stat-card stat-click active" type="button" data-filter="all" onclick="setFilter('all')">
+        <h3>إجمالي البلاغات</h3>
+        <p id="countAll">0</p>
+      </button>
+
+      <button class="stat-card stat-click" type="button" data-filter="processing" onclick="setFilter('processing')">
+        <h3>قيد المراجعة</h3>
+        <p id="countProcessing">0</p>
+      </button>
+
+      <button class="stat-card stat-click" type="button" data-filter="running" onclick="setFilter('running')">
+        <h3>تحت التنفيذ</h3>
+        <p id="countRunning">0</p>
+      </button>
+
+      <button class="stat-card stat-click" type="button" data-filter="done" onclick="setFilter('done')">
+        <h3>تم الحل</h3>
+        <p id="countDone">0</p>
+      </button>
+    </div>
+
+    <!-- ===== Trainers ===== -->
+    <section class="reports-section">
+      <h2 class="section-title">بلاغات المدربين</h2>
+
+      <div class="reports-box">
+        <div class="reports-scroll" id="trainerList"></div>
+      </div>
+    </section>
+
+    <!-- ===== Trainees ===== -->
+    <section class="reports-section">
+      <h2 class="section-title">بلاغات المتدربين</h2>
+
+      <div class="reports-box">
+        <div class="reports-scroll" id="traineeList"></div>
+      </div>
+    </section>
+
+  </main>
+
+<script>
+let currentFilter = "all";
+
+function setFilter(filter){
+  currentFilter = filter;
+
+  document.querySelectorAll(".stat-click").forEach(b=>{
+    b.classList.toggle("active", b.dataset.filter === filter);
+  });
+
+  applyFilter();
+}
+
+function applyFilter(){
+  const cards = document.querySelectorAll(".report-card");
+
+  cards.forEach(card=>{
+    const s = card.dataset.status;
+
+    if(currentFilter === "all"){
+      card.style.display = "";
+    } else {
+      card.style.display = (s === currentFilter) ? "" : "none";
+    }
+  });
+
+  updateCounts();
+}
+
+function updateCounts(){
+  const cards = document.querySelectorAll(".report-card");
+  let total=0, processing=0, running=0, done=0;
+
+  cards.forEach(card=>{
+    total++;
+    if(card.dataset.status === "processing") processing++;
+    if(card.dataset.status === "running") running++;
+    if(card.dataset.status === "done") done++;
+  });
+
+  document.getElementById("countAll").textContent = total;
+  document.getElementById("countProcessing").textContent = processing;
+  document.getElementById("countRunning").textContent = running;
+  document.getElementById("countDone").textContent = done;
+}
+
+function loadReports() {
+  let trainerReports = JSON.parse(localStorage.getItem("teacherReport")) || [];
+  let traineeReports = JSON.parse(localStorage.getItem("studentreports")) || [];
+
+  const trainerBox = document.getElementById("trainerList");
+  const traineeBox = document.getElementById("traineeList");
+
+  trainerBox.innerHTML = "";
+  traineeBox.innerHTML = "";
+
+  trainerReports.forEach(r => trainerBox.innerHTML += createReportCard(r));
+  traineeReports.forEach(r => traineeBox.innerHTML += createReportCard(r));
+
+  applyFilter();
+}
+
+function createReportCard(r){
+
+  let transferFields = "";
+  if(r.type === "نقل"){
+    transferFields = `
+      <p><b>من:</b> ${r.from || "-"}</p>
+      <p><b>إلى:</b> ${r.to || "-"}</p>
+    `;
+  }
+
+  let locationField = "";
+  if(r.type !== "نقل"){
+    locationField = `<p><b>الموقع:</b> ${r.location || "-"}</p>`;
+  }
+
+  let statusText =
+    r.status === "processing" ? "قيد المراجعة" :
+    r.status === "running" ? "تحت التنفيذ" :
+    r.status === "done" ? "تم التنفيذ" :
+    r.status;
+
+  return `
+    <div class="report-card" data-status="${r.status}">
+      <h3>#${r.id} - ${r.type}</h3>
+
+      <p><b>الوصف:</b> ${r.desc}</p>
+
+      ${locationField}
+      ${transferFields}
+
+      <div class="actions" style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        width:100%;
+        margin-top:10px;
+        position:relative;
+      ">
+
+        <div style="width:80px;"></div>
+
+        <span class="status-tag" style="
+          position:absolute;
+          left:60%;
+          transform:translateX(-50%);
+        ">
+          ${statusText}
+        </span>
+
+        <button class="btn-process" type="button" onclick="openReport('${r.id}')">
+          عرض البلاغ
+        </button>
+
+      </div>
+    </div>
+  `;
+}
+
+function openReport(id){
+  localStorage.setItem("adminSelectedReport", id);
+  window.location.href = "admin_report.html";
+}
+
+loadReports();
+</script>
+
+<footer class="main-footer">
+  <div class="footer-content">
+      <p>&copy; 2026 حقوق محفوظة | محطة الدعم</p>
+      <ul class="footer-links">
+          <li><a href="index.html">الرئيسية</a></li>
+          <li><a href="#">عن الموقع</a></li>
+          <li><a href="mailto:example@example.com">اتصل بنا</a></li>
+      </ul>
+  </div>
+</footer>
+
+</body>
+</html>
